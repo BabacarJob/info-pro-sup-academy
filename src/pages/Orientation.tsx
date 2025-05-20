@@ -39,10 +39,18 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
+// Type pour les résultats d'orientation
+interface OrientationResult {
+  title: string;
+  description: string;
+  careers: string[];
+  establishments: string[];
+}
+
 const OrientationPage = () => {
   const [step, setStep] = useState(1);
   const [showResults, setShowResults] = useState(false);
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<OrientationResult | null>(null);
   const { toast } = useToast();
 
   const form = useForm<FormValues>({
@@ -57,7 +65,7 @@ const OrientationPage = () => {
   });
 
   // Fonction pour déterminer les résultats en fonction des réponses
-  const calculateResults = (data: FormValues) => {
+  const calculateResults = (data: FormValues): OrientationResult => {
     // Logique simple d'orientation basée sur les réponses
     const scores = {
       sciences: 0,
@@ -106,7 +114,8 @@ const OrientationPage = () => {
 
     // Trouver le domaine avec le score le plus élevé
     let maxScore = 0;
-    let topField = '';
+    let topField = 'sciences'; // Valeur par défaut
+
     Object.entries(scores).forEach(([field, score]) => {
       if (score > maxScore) {
         maxScore = score;
@@ -115,7 +124,7 @@ const OrientationPage = () => {
     });
 
     // Générer les résultats
-    const fieldToCareer = {
+    const fieldToCareer: Record<string, OrientationResult> = {
       sciences: {
         title: 'Sciences et Recherche',
         description: 'Vous avez un esprit analytique et une forte curiosité intellectuelle.',
@@ -148,17 +157,26 @@ const OrientationPage = () => {
       },
     };
 
-    return fieldToCareer[topField as keyof typeof fieldToCareer];
+    return fieldToCareer[topField];
   };
 
   const onSubmit = (data: FormValues) => {
-    const calculatedResults = calculateResults(data);
-    setResults(calculatedResults);
-    setShowResults(true);
-    toast({
-      title: "Test complété !",
-      description: "Vos résultats sont maintenant disponibles.",
-    });
+    try {
+      const calculatedResults = calculateResults(data);
+      setResults(calculatedResults);
+      setShowResults(true);
+      toast({
+        title: "Test complété !",
+        description: "Vos résultats sont maintenant disponibles.",
+      });
+    } catch (error) {
+      console.error("Erreur lors du calcul des résultats:", error);
+      toast({
+        title: "Une erreur est survenue",
+        description: "Impossible de calculer vos résultats. Veuillez réessayer.",
+        variant: "destructive",
+      });
+    }
   };
 
   const nextStep = () => {
@@ -607,28 +625,30 @@ const OrientationPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="bg-ipro-teal/10 p-4 rounded-lg mb-6">
-              <h2 className="text-2xl font-semibold text-ipro-navy mb-2">{results.title}</h2>
-              <p className="text-gray-600 mb-4">{results.description}</p>
-              
-              <div className="mb-6">
-                <h3 className="text-lg font-medium text-ipro-navy mb-2">Métiers recommandés :</h3>
-                <ul className="list-disc list-inside">
-                  {results.careers.map((career: string, index: number) => (
-                    <li key={index} className="text-gray-600">{career}</li>
-                  ))}
-                </ul>
+            {results && (
+              <div className="bg-ipro-teal/10 p-4 rounded-lg mb-6">
+                <h2 className="text-2xl font-semibold text-ipro-navy mb-2">{results.title}</h2>
+                <p className="text-gray-600 mb-4">{results.description}</p>
+                
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium text-ipro-navy mb-2">Métiers recommandés :</h3>
+                  <ul className="list-disc list-inside">
+                    {results.careers.map((career: string, index: number) => (
+                      <li key={index} className="text-gray-600">{career}</li>
+                    ))}
+                  </ul>
+                </div>
+                
+                <div>
+                  <h3 className="text-lg font-medium text-ipro-navy mb-2">Établissements à considérer :</h3>
+                  <ul className="list-disc list-inside">
+                    {results.establishments.map((establishment: string, index: number) => (
+                      <li key={index} className="text-gray-600">{establishment}</li>
+                    ))}
+                  </ul>
+                </div>
               </div>
-              
-              <div>
-                <h3 className="text-lg font-medium text-ipro-navy mb-2">Établissements à considérer :</h3>
-                <ul className="list-disc list-inside">
-                  {results.establishments.map((establishment: string, index: number) => (
-                    <li key={index} className="text-gray-600">{establishment}</li>
-                  ))}
-                </ul>
-              </div>
-            </div>
+            )}
             
             <div className="mb-6">
               <h3 className="text-lg font-medium text-ipro-navy mb-2">Que faire maintenant ?</h3>
